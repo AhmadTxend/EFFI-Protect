@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "Chrome user event capture",
+  "description": "A Chrome extension to capture user event",
+  "version": "1.0",
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "storage",
+    "scripting",
+    "cookies"
+  ],
+  "host_permissions": [
+    "https://chatgpt.com/*"
+  ],
+  "omnibox": { "keyword" : "i" },
+  
+  "icons": {
+    "16": "/Images/icon.png",
+    "48": "/Images/icon.png",
+    "128": "/Images/icon.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+  "default_icon": "/Images/icon.png",
+   "default_popup": "popup.html"
+},
+
+  "content_security_policy": 
+  {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  }
+}
+

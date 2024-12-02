@@ -1,0 +1,12 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+body {
+    background-image: url('https://plus.unsplash.com/premium_photo-1686729237226-0f2edb1e8970?q=80&w=1934&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D') !important; /* Path to your image */
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+}
