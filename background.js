@@ -1,6 +1,3 @@
-console.log("background.js");
-
-
 // Enum-like object for website keywords
 const WebsiteEnum = {
     CHATGPT: 'chatgpt',
@@ -10,25 +7,26 @@ const WebsiteEnum = {
 
 function captureKeyPresses(tabId, url) {
     console.log("captureKeyPresses function injected");
-    let typedText = '';
-    // Listen for keydown events
-    document.addEventListener('keydown', function (event) {
-        const activeElement = document.activeElement;
 
-        const printableKeys = /^[A-Za-z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]$/;
-    
-        if (event.key === ' ' || printableKeys.test(event.key))
+    let typedText = '';
+
+    // Function to handle keydown event
+    function handleKeydown(event) {
+        const printableKeys = /^[A-Za-z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/? ]$/; // Including space
+        
+        if (event.ctrlKey || event.altKey)
         {
-            typedText += event.key; // Concatenate typed character
+            return;
         }
-        else if (event.key === 'Backspace') {
+        if (event.key === ' ' || printableKeys.test(event.key)) {
+            typedText += event.key; // Concatenate typed character
+        } else if (event.key === 'Backspace') {
             // On pressing 'Backspace', remove the last character from typed text
             typedText = typedText.slice(0, -1); // Remove the last character
         }
 
         // On pressing 'Enter', log the concatenated text
         if (event.key === 'Enter') {
-            // console.log('User typed text: ', typedText);
             const info = {
                 tabId: tabId, // Passing tabId
                 typedText: typedText, // User's typed text
@@ -37,9 +35,41 @@ function captureKeyPresses(tabId, url) {
 
             // Log the object to console
             console.log('Captured info:', info);
-            typedText = '';
+            typedText = ''; // Reset after Enter is pressed
         }
-    });
+    }
+
+    // Function to handle paste event
+    function handlePaste(event) {
+        // Delay to allow pasted content to be updated in the field
+        setTimeout(() => {
+            const activeElement = document.activeElement;
+            let pastedText = '';
+
+            // Check if the active element is an input or textarea
+            if (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') {
+                pastedText = activeElement.value; // Get the value after paste
+            } else if (activeElement.isContentEditable) {
+                pastedText = activeElement.innerText; // For editable divs
+            }
+
+            // Log the pasted text
+            const info = {
+                tabId: tabId, // Passing tabId
+                typedText: pastedText, // User's pasted text
+                url: url, // Passing the URL of the current tab
+            };
+
+            // Log the object to console
+            console.log('Captured pasted text:', info);
+        }, 0);
+    }
+
+    // Listen for keydown events
+    document.addEventListener('keydown', handleKeydown);
+
+    // Listen for paste events
+    document.addEventListener('paste', handlePaste);
 }
 
 // Listen for tab updates and check the URL
@@ -58,7 +88,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
             chrome.scripting.executeScript({
                 target: { tabId: tabId },
                 func: captureKeyPresses,
-                args: [tabId, tab.url]
+                args: [tabId, tab.url]  // Pass tabId and url as arguments to the function
             });
         } else if (hostname.includes(WebsiteEnum.GOOGLE)) {
             console.log('User visited a Google website:', tab.url);
@@ -78,4 +108,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         }
     }
 });
+
+
+
 
