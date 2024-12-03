@@ -21,6 +21,7 @@
     "48": "/Images/icon.png",
     "128": "/Images/icon.png"
   },
+
   "background": {
     "service_worker": "background.js"
   },
@@ -28,6 +29,17 @@
   "default_icon": "/Images/icon.png",
    "default_popup": "popup.html"
 },
+
+"content_scripts": [
+      {
+        "matches": [
+            "https://www.google.com/*",
+            "https://chatgpt.com/*"
+          ],
+        "js": ["content.js"]
+        
+      }
+    ],
 
   "content_security_policy": 
   {
