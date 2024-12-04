@@ -1,7 +1,8 @@
 
 console.log("Content script loaded");
+
 // Function to capture key presses
-function captureKeyPresses(tabId, url) {
+function captureInput(tabId, url) {
 
   console.log("captureKeyPresses function injected");
   let typedText = '';
@@ -44,7 +45,7 @@ function captureKeyPresses(tabId, url) {
   
 
       // On pressing 'Enter', log the concatenated text
-      if (event.key === 'Enter' && typedText) {
+      if (event.key === 'Enter' && !event.shiftKey && typedText) {
           const info = {
               tabId: tabId, // Passing tabId
               typedText: typedText, // User's typed text
@@ -103,13 +104,46 @@ function captureKeyPresses(tabId, url) {
   // Event Delegation: Listen for clicks on buttons (e.g., send button, search icon)
   document.body.addEventListener('click', (event) => {
    // Check if the clicked element is a button or a submit input, regardless of child elements like SVG
-    const button = event.target.closest('button');
+    const button = event.target.closest('button[aria-label="Send prompt"]');
+    const AttachmentButton = event.target.closest('button[aria-label="Attach files"]');
+    
     if (button && (button.matches('button') || 
                     button.matches('input[type="button"]') || 
                     button.matches('input[type="submit"]'))) {
         handleButtonClick(event);
     }
+    if (AttachmentButton) {
+        console.log('Attachment button clicked:', button);
+    }
   });
+
+  document.addEventListener('change', function(event) {
+        if (event.target && event.target.type === 'file') {
+            const files = event.target.files; // Files uploaded by the user
+            
+            // Loop through all selected files (though typically only one file is selected)
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                
+                // Ensure the file is a text file
+                if (file.type === 'text/plain') {
+                    const reader = new FileReader();
+                    
+                    // Define the onload event to handle the file content once it's read
+                    reader.onload = function(e) {
+                        const fileContent = e.target.result; // File content as a string
+                        console.log('Captured file content:', fileContent);
+                    };
+
+                    // Read the file as text
+                    reader.readAsText(file);
+                } else {
+                    console.log('Not a text file:', file.name);
+                }
+            }
+        }
+    });
+
 
   document.body.addEventListener('submit', (event) => {
       console.log('Button click listener')
@@ -122,10 +156,114 @@ function captureKeyPresses(tabId, url) {
   document.addEventListener('paste', handlePaste);
 }
 
+function captureResponse() {
+
+    console.log("capture response called.");
+
+    const originalFetch = window.fetch;
+    console.log("originalFetch:",originalFetch);
+
+    window.fetch = function(url, options) {
+        
+        // Check if the request is to the LLM API endpoint
+        if (url.includes("https://chatgpt.com/backend-api/conversation/")) {
+            console.log("Captured request to LLM API:", url, options);
+        }
+
+        // Call the original fetch and capture the response
+        return originalFetch(url, options).then(response => {
+            // Check if the response is from the desired endpoint
+            if (response.url.includes("https://chatgpt.com/backend-api/conversation/")) {
+                console.log('Captured response from LLM API:', response);
+
+                // Clone the response to consume the body
+                response.clone().json().then(data => {
+                    console.log('LLM Response Body:', data);
+                    // Do something with the LLM response here
+                }).catch(error => {
+                    console.error('Error capturing response body:', error);
+                });
+            }
+
+            // Always return the original response so the page can continue processing
+            return response;
+        }).catch(error => {
+            console.error('Fetch error:', error);
+            throw error; // Rethrow to ensure the page functions properly
+        });
+    };
+}
+
+
+// Function to process uploaded files
+function processUploadedFile(file) {
+    const fileType = file.type;
+
+    if (fileType === "text/plain") {
+        // Handle text file
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const textContent = event.target.result;
+            console.log("Text file content:", textContent);
+
+            // Do something with the extracted text
+        };
+        reader.readAsText(file);
+    } else if (fileType === "application/pdf") {
+        // Handle PDF file using PDF.js
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const arrayBuffer = event.target.result;
+
+            // Use PDF.js to extract text from the PDF
+            pdfjsLib.getDocument({ data: arrayBuffer }).promise.then(pdf => {
+                let text = "";
+                const numPages = pdf.numPages;
+
+                const pagePromises = [];
+                for (let i = 1; i <= numPages; i++) {
+                    pagePromises.push(
+                        pdf.getPage(i).then(page => {
+                            return page.getTextContent().then(content => {
+                                const pageText = content.items.map(item => item.str).join(" ");
+                                text += pageText + "\n";
+                            });
+                        })
+                    );
+                }
+
+                Promise.all(pagePromises).then(() => {
+                    console.log("PDF file content:", text);
+
+                    // Do something with the extracted text
+                });
+            });
+        };
+        reader.readAsArrayBuffer(file);
+    } else {
+        console.error("Unsupported file type:", fileType);
+    }
+}
+
 // Listen for messages from the background script
 chrome.runtime.onMessage.addListener((message) => {
-  if (message.tabId && message.url) {
-      // Call captureKeyPresses with the arguments
-      captureKeyPresses(message.tabId, message.url);
-  }
+    
+    if (window.listenersInitialized) {
+        console.log("Listeners already initialized. Skipping re-initialization.");
+        return;
+    }
+    window.listenersInitialized = true; // Mark that listeners have been added
+
+    if (message.tabId && message.url) {
+        // Call captureKeyPresses with the arguments
+        captureInput(message.tabId, message.url);
+        // captureResponse();
+    }
 });
+
+
+
+
+
+
+  

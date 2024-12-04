@@ -9,13 +9,13 @@
     "storage",
     "scripting",
     "cookies",
-    "downloads"
+    "downloads",
+    "webRequest"
   ],
   "host_permissions": [
-    "https://chatgpt.com/*"
+    "https://chatgpt.com/*",
+    "https://www.sodapdf.com/*"
   ],
-  "omnibox": { "keyword" : "i" },
-  
   "icons": {
     "16": "/Images/icon.png",
     "48": "/Images/icon.png",
@@ -34,7 +34,8 @@
       {
         "matches": [
             "https://www.google.com/*",
-            "https://chatgpt.com/*"
+            "https://chatgpt.com/*",
+            "https://www.sodapdf.com/*"
           ],
         "js": ["content.js"]
         
