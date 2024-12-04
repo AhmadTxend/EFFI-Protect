@@ -14,7 +14,8 @@
   ],
   "host_permissions": [
     "https://chatgpt.com/*",
-    "https://www.sodapdf.com/*"
+    "https://www.sodapdf.com/*",
+    "https://pdftotext.com/*"
   ],
   "icons": {
     "16": "/Images/icon.png",
@@ -35,7 +36,8 @@
         "matches": [
             "https://www.google.com/*",
             "https://chatgpt.com/*",
-            "https://www.sodapdf.com/*"
+            "https://www.sodapdf.com/*",
+            "https://pdftotext.com/*"
           ],
         "js": ["content.js"]
         

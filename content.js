@@ -1,6 +1,5 @@
 
 console.log("Content script loaded");
-
 // Function to capture key presses
 function captureInput(tabId, url) {
 
@@ -22,8 +21,7 @@ function captureInput(tabId, url) {
         if (event.key === 'Backspace' && event.ctrlKey) {
           typedText = ''; // Clear typedText when Ctrl + Backspace is pressed
         }
-
-          return; // Don't capture any other key when Ctrl or Alt is pressed
+            return; // Don't capture any other key when Ctrl or Alt is pressed
       }
 
       if (event.key === ' ' || printableKeys.test(event.key)) {
@@ -47,15 +45,21 @@ function captureInput(tabId, url) {
       // On pressing 'Enter', log the concatenated text
       if (event.key === 'Enter' && !event.shiftKey && typedText) {
           const info = {
-              tabId: tabId, // Passing tabId
-              typedText: typedText, // User's typed text
-              url: url, // Passing the URL of the current tab
+              TabId: tabId, // Passing tabId
+              UserInput: typedText, // User's typed text
+              URL: url, // Passing the URL of the current tab
           };
 
-          // Log the object to console
-          console.log('Captured info:', info);
-          typedText = ''; // Reset after Enter is pressed
-      }
+        //   Log the object to console
+        //   console.log('Captured info:', info);
+        
+        // Store the info in localStorage
+        const storedLogs = JSON.parse(localStorage.getItem('userLogs')) || []; // Retrieve previous logs if any
+        storedLogs.push(info); // Add the new log
+        localStorage.setItem('userLogs', JSON.stringify(storedLogs)); // Store the updated logs
+    
+        typedText = ''; // Reset after Enter is pressed
+    }
   }
 
   // Function to handle paste event
@@ -74,13 +78,19 @@ function captureInput(tabId, url) {
 
           // Log the pasted text
           const info = {
-              tabId: tabId, // Passing tabId
-              typedText: pastedText, // User's pasted text
-              url: url, // Passing the URL of the current tab
+              TabId: tabId, // Passing tabId
+              UserInput: pastedText, // User's pasted text
+              URL: url, // Passing the URL of the current tab
           };
 
-          // Log the object to console
-          console.log('Captured pasted text:', info);
+        // Log the object to console
+        //   console.log('Captured pasted text:', info);
+            
+            // Store the info in localStorage
+            const storedLogs = JSON.parse(localStorage.getItem('userLogs')) || []; // Retrieve previous logs if any
+            storedLogs.push(info); // Add the new log
+            localStorage.setItem('userLogs', JSON.stringify(storedLogs)); // Store the updated logs
+    
       }, 0);
   }
 
@@ -89,12 +99,17 @@ function captureInput(tabId, url) {
       console.log("handleButtonClick.");
       // Check if the clicked button is the one to send the text (e.g., send or search button)
       const info = {
-          tabId: tabId,
-          typedText: typedText,  // Captured text
-          url: url,  // The URL of the current tab
+          TabId: tabId,
+          UserInput: typedText,  // Captured text
+          URL: url,  // The URL of the current tab
       };
 
-      console.log('Captured info:', info); // Log the info
+    //   console.log('Captured info:', info); // Log the info
+        // Store the info in localStorage
+        const storedLogs = JSON.parse(localStorage.getItem('userLogs')) || []; // Retrieve previous logs if any
+        storedLogs.push(info); // Add the new log
+        localStorage.setItem('userLogs', JSON.stringify(storedLogs)); // Store the updated logs
+
       typedText = '';  // Reset typedText after sending the message
   }
 
@@ -117,28 +132,64 @@ function captureInput(tabId, url) {
     }
   });
 
-  document.addEventListener('change', function(event) {
+
+    document.addEventListener('change', function(event) {
+        console.log("Change Listener invoked",event.target , event.target.type)
+
         if (event.target && event.target.type === 'file') {
             const files = event.target.files; // Files uploaded by the user
+            console.log("files PDF",files)
             
+
             // Loop through all selected files (though typically only one file is selected)
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                
-                // Ensure the file is a text file
-                if (file.type === 'text/plain') {
-                    const reader = new FileReader();
-                    
-                    // Define the onload event to handle the file content once it's read
-                    reader.onload = function(e) {
-                        const fileContent = e.target.result; // File content as a string
-                        console.log('Captured file content:', fileContent);
-                    };
 
-                    // Read the file as text
+                const reader = new FileReader();
+
+                // Handle file based on its type
+                reader.onload = function(e) {
+                    const fileContent = e.target.result; // This will contain the file content
+
+                    // If the file is a text file, we can display the raw content directly
+                    if (file.type === 'text/plain') {
+                        console.log('Captured text file content:', fileContent);
+                    } 
+                    // If the file is an image, we can display it as a data URL
+                    else if (file.type.startsWith('image/')) {
+                        console.log('Captured image file (as Data URL):', fileContent);
+                        // Optionally, you could display it by setting it as the src of an <img> element:
+                        // const imgElement = document.createElement('img');
+                        // imgElement.src = fileContent;
+                        // document.body.appendChild(imgElement);
+                    } 
+                    // For PDFs, or any other file, you might want to log the file name and size
+                    else if (file.type === 'application/pdf') {
+                        console.log('Captured PDF file:', file , file.name, 'Size:', file.size);
+                        processUploadedFile(file);
+                    }
+                    else {
+                        // For any other files (binary), just log the result (in base64 format)
+                        console.log('Captured file (binary or other format):', file.type, fileContent);
+                    }
+                };
+
+                // Check the file type and read it accordingly
+                if (file.type === 'text/plain') {
+                    // For text files, read as text
                     reader.readAsText(file);
-                } else {
-                    console.log('Not a text file:', file.name);
+                } 
+                else if (file.type.startsWith('image/')) {
+                    // For image files, read as Data URL (base64 encoded)
+                    reader.readAsDataURL(file);
+                }
+                else if (file.type === 'application/pdf') {
+                    // For PDF files, read as array buffer
+                    reader.readAsArrayBuffer(file);
+                }
+                else {
+                    // For any other file type, read as binary string or Data URL
+                    reader.readAsDataURL(file);
                 }
             }
         }
@@ -146,7 +197,7 @@ function captureInput(tabId, url) {
 
 
   document.body.addEventListener('submit', (event) => {
-      console.log('Button click listener')
+      console.log('Submit listener')
       // Prevent the form from submitting and handle it as if the button was clicked
       event.preventDefault();
       handleButtonClick(event);
@@ -247,8 +298,7 @@ function processUploadedFile(file) {
 
 // Listen for messages from the background script
 chrome.runtime.onMessage.addListener((message) => {
-    
-    if (window.listenersInitialized) {
+    if (window.listenersInitialized){
         console.log("Listeners already initialized. Skipping re-initialization.");
         return;
     }
